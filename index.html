@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INLT - DMTX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- SDK do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+
+    <nav class="bg-gray-800 p-4 shadow-xl mb-6">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold tracking-tighter cursor-pointer" onclick="showSection('home')">
+                <span class="text-blue-500">i</span>Need Listen This
+            </h1>
+            <div class="space-x-4 hidden sm:flex">
+                <button onclick="showSection('movies')" class="hover:text-blue-400">Filmes</button>
+                <button onclick="showSection('music')" class="hover:text-blue-400">Artistas</button>
+                <button onclick="showSection('books')" class="hover:text-blue-400">Livros</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 pb-12">
+        <!-- HOME SELECTION -->
+        <section id="home" class="text-center py-20">
+            <h2 class="text-4xl font-extrabold mb-8">Lista de interesses</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div onclick="showSection('movies')"
+                    class="bg-gray-800 p-8 rounded-xl cursor-pointer hover:scale-105 transition border border-gray-700">
+                    <i class="fas fa-film text-5xl mb-4 text-blue-400"></i>
+                    <h3 class="text-xl font-bold">Filmes, Series & Animes</h3>
+                </div>
+                <div onclick="showSection('music')"
+                    class="bg-gray-800 p-8 rounded-xl cursor-pointer hover:scale-105 transition border border-gray-700">
+                    <i class="fas fa-music text-5xl mb-4 text-purple-400"></i>
+                    <h3 class="text-xl font-bold">Artistas</h3>
+                </div>
+                <div onclick="showSection('books')"
+                    class="bg-gray-800 p-8 rounded-xl cursor-pointer hover:scale-105 transition border border-gray-700">
+                    <i class="fas fa-book text-5xl mb-4 text-green-400"></i>
+                    <h3 class="text-xl font-bold">Livros</h3>
+                </div>
+            </div>
+        </section>
+
+        <!-- LIST VIEW -->
+        <section id="list-view" class="hidden">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <h2 id="section-title" class="text-3xl font-bold">Categoria</h2>
+                <div class="flex w-full md:w-auto gap-2">
+                    <input type="text" id="search-input" placeholder="Buscar..."
+                        class="bg-gray-700 text-white p-2 rounded w-full md:w-64 outline-none">
+                    <button onclick="searchAPI()"
+                        class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">Buscar</button>
+                </div>
+            </div>
+
+            <div id="api-results" class="mb-12 hidden bg-gray-800 p-6 rounded-xl border border-gray-700">
+                <h3 class="text-lg font-semibold mb-4 text-gray-400 italic">Resultados:</h3>
+                <div id="api-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+            </div>
+
+            <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Minha Lista no Banco de Dados:</h3>
+            <div id="saved-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+        </section>
+    </main>
+
+    <script src="./env.js"></script>
+    <script>
+        // CONFIGURAÇÕES - CARREGA CHAVES DO ARQUIVO .env
+        const env = window.env || {};
+        const SUPABASE_URL = env.SUPABASE_URL || '';
+        const SUPABASE_KEY = env.SUPABASE_KEY || '';
+        const OMDB_API_KEY = env.OMDB_API_KEY || '';
+
+        // Inicializa o cliente Supabase
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentCategory = '';
+
+        function showSection(section) {
+            document.getElementById('home').classList.add('hidden');
+            const listView = document.getElementById('list-view');
+
+            if (section === 'home') {
+                listView.classList.add('hidden');
+                document.getElementById('home').classList.remove('hidden');
+            } else {
+                currentCategory = section;
+                listView.classList.remove('hidden');
+                document.getElementById('section-title').innerText = section.toUpperCase();
+                document.getElementById('api-results').classList.add('hidden');
+                renderSavedItems();
+            }
+        }
+
+        // BUSCA NAS APIS PÚBLICAS
+        async function searchAPI() {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) return;
+
+            const grid = document.getElementById('api-grid');
+            grid.innerHTML = '<div class="col-span-full flex justify-center"><img src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjhibXZ3eG8zbWpkNnY1czZjY28xZzc5c2gwMmtwcGwxbzIyM2lxdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3OVTHkjjStBLH9dDIi/giphy.gif" alt="Loading" class="w-12 h-12"></div>';
+            document.getElementById('api-results').classList.remove('hidden');
+
+            let url = '';
+            if (currentCategory === 'movies') {
+                url = `https://www.omdbapi.com/?apikey=${OMDB_API_KEY}&s=${encodeURIComponent(query)}&type=movie&page=1`;
+            } else if (currentCategory === 'music') {
+                url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=musicArtist&limit=5`;
+            } else if (currentCategory === 'books') {
+                url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}`;
+            }
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                displayResults(data);
+            } catch (err) {
+                grid.innerHTML = 'Erro na busca.';
+            }
+        }
+
+        function displayResults(data) {
+            const grid = document.getElementById('api-grid');
+            grid.innerHTML = '';
+            let items;
+
+            if (currentCategory === 'movies') {
+                items = data.Search?.slice(0, 5) || [];
+            } else if (currentCategory === 'music') {
+                items = data.results || [];
+            } else {
+                items = data.items?.slice(0, 5) || [];
+            }
+
+            if (items.length === 0) {
+                grid.innerHTML = '<p class="text-gray-400 col-span-full">Nenhum resultado encontrado.</p>';
+                return;
+            }
+
+            items.forEach(item => {
+                let title, img, id, subtitle = '';
+                if (currentCategory === 'movies') {
+                    title = item.Title;
+                    img = item.Poster && item.Poster !== 'N/A' ? item.Poster : 'https://placehold.co/200x300?text=' + encodeURIComponent(title);
+                    id = item.imdbID;
+                    subtitle = item.Year || 'Ano desconhecido';
+                } else if (currentCategory === 'music') {
+                    title = item.artistName;
+                    img = 'https://placehold.co/200x300?text=' + encodeURIComponent(title);
+                    id = item.artistId.toString();
+                } else {
+                    title = item.volumeInfo.title;
+                    img = item.volumeInfo.imageLinks?.thumbnail || 'https://placehold.co/200x300?text=' + encodeURIComponent(title);
+                    id = item.id;
+                    const authors = item.volumeInfo.authors;
+                    subtitle = authors && authors.length > 0 ? authors[0] : 'Autor desconhecido';
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-gray-700 p-2 rounded text-center";
+                let cardHTML = `
+                    <img src="${img}" class="h-32 mx-auto rounded mb-2 object-cover">
+                    <p class="text-xs font-bold truncate">${title}</p>
+                `;
+                if (subtitle) {
+                    cardHTML += `<p class="text-[10px] text-gray-400 truncate">${subtitle}</p>`;
+                }
+                cardHTML += `<button onclick="saveToSupabase('${id}', '${title.replace(/'/g, "")}', '${img}')" class="bg-green-600 text-[10px] px-2 py-1 mt-2 rounded">Adicionar</button>`;
+                card.innerHTML = cardHTML;
+                grid.appendChild(card);
+            });
+        }
+
+        // --- FUNÇÕES DO SUPABASE (BANCO DE DADOS) ---
+
+        async function saveToSupabase(itemId, title, imgUrl) {
+            // Verifica se já existe
+            const { data: existing } = await _supabase
+                .from('my_archive')
+                .select('*')
+                .eq('item_id', itemId)
+                .eq('category', currentCategory);
+
+            if (existing.length > 0) return alert('Já está salvo!');
+
+            const { error } = await _supabase
+                .from('my_archive')
+                .insert([{ item_id: itemId, title: title, img_url: imgUrl, category: currentCategory }]);
+
+            if (error) alert('Erro ao salvar: ' + error.message);
+            else renderSavedItems();
+        }
+
+        async function renderSavedItems() {
+            const grid = document.getElementById('saved-grid');
+
+            const { data, error } = await _supabase
+                .from('my_archive')
+                .select('*')
+                .eq('category', currentCategory)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                grid.innerHTML = 'Erro ao carregar dados.';
+                return;
+            }
+
+            if (data.length === 0) {
+                grid.innerHTML = '<p class="col-span-full text-gray-500">Sua lista está vazia.</p>';
+                return;
+            }
+
+            grid.innerHTML = data.map(item => `
+                <div class="bg-gray-800 p-3 rounded border border-gray-700 relative group">
+                    <img src="${item.img_url}" class="rounded mb-2 h-40 object-cover w-full">
+                    <h4 class="text-sm font-bold truncate">${item.title}</h4>
+                    <button onclick="deleteFromSupabase(${item.id})" class="absolute top-2 right-2 bg-red-600 p-2 rounded-full opacity-0 group-hover:opacity-100 transition">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteFromSupabase(id) {
+            const { error } = await _supabase
+                .from('my_archive')
+                .delete()
+                .eq('id', id);
+
+            if (error) alert('Erro ao deletar');
+            else renderSavedItems();
+        }
+    </script>
+</body>
+
+</html>
