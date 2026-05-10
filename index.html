@@ -75,18 +75,22 @@
             <div id="saved-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
         </section>
     </main>
-    <script src="env.js"></script>
     <script>
-        // CONFIGURAÇÕES - CARREGA CHAVES DO ARQUIVO .env
-        const env = window.env || {};
-        const SUPABASE_URL = "PROCESSO_ENV_SUPABASE_URL" || '';
-        const SUPABASE_KEY = "PROCESSO_ENV_SUPABASE_KEY" || '';
-        const OMDB_API_KEY = "PROCESSO_ENV_OMDB_API_KEY" || '';
-
-        // Inicializa o cliente Supabase
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+        // CONFIGURAÇÕES - CARREGA CHAVES DO NETLIFY FUNCTIONS
+        let _supabase = null;
         let currentCategory = '';
+
+        async function initConfig() {
+            try {
+                const response = await fetch('/.netlify/functions/config');
+                const config = await response.json();
+                _supabase = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_KEY);
+            } catch (err) {
+                console.error('Erro ao carregar configuração do Netlify Functions', err);
+            }
+        }
+
+        initConfig();
 
         function showSection(section) {
             document.getElementById('home').classList.add('hidden');
@@ -115,7 +119,7 @@
 
             let url = '';
             if (currentCategory === 'movies') {
-                url = `https://www.omdbapi.com/?apikey=${OMDB_API_KEY}&s=${encodeURIComponent(query)}&type=movie&page=1`;
+                url = `/.netlify/functions/search-movies?q=${encodeURIComponent(query)}`;
             } else if (currentCategory === 'music') {
                 url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=musicArtist&limit=5`;
             } else if (currentCategory === 'books') {
