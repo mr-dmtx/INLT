@@ -75,13 +75,14 @@
             <div id="saved-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
         </section>
     </main>
-
+    <script src="env.js"></script>
     <script>
         // CONFIGURAÇÕES - CARREGA CHAVES DO ARQUIVO .env
         const env = window.env || {};
-        const SUPABASE_URL = env.SUPABASE_URL || '';
-        const SUPABASE_KEY = env.SUPABASE_KEY || '';
-        const OMDB_API_KEY = env.OMDB_API_KEY || '';
+        const SUPABASE_URL = "PROCESSO_ENV_SUPABASE_URL" || '';
+        const SUPABASE_KEY = "PROCESSO_ENV_SUPABASE_KEY" || '';
+        const OMDB_API_KEY = "PROCESSO_ENV_OMDB_KEY" || '';
+        console.log(env);
 
         // Inicializa o cliente Supabase
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
