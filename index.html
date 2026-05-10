@@ -81,8 +81,7 @@
         const env = window.env || {};
         const SUPABASE_URL = "PROCESSO_ENV_SUPABASE_URL" || '';
         const SUPABASE_KEY = "PROCESSO_ENV_SUPABASE_KEY" || '';
-        const OMDB_API_KEY = "PROCESSO_ENV_OMDB_KEY" || '';
-        console.log(env);
+        const OMDB_API_KEY = "PROCESSO_ENV_OMDB_API_KEY" || '';
 
         // Inicializa o cliente Supabase
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
