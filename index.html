@@ -179,7 +179,31 @@
             } else if (currentCategory === 'music') {
                 url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=musicArtist&limit=5`;
             } else if (currentCategory === 'books') {
-                url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}`;
+                // Verifica se estamos em um ambiente Netlify (produção)
+                const isNetlifyEnv = window.location.hostname.includes('netlify');
+
+                if (isNetlifyEnv) {
+                    const searchBooksUrl = `/.netlify/functions/search-books?q=${encodeURIComponent(query)}`;
+                    try {
+                        const response = await fetch(searchBooksUrl);
+                        if (response.ok) {
+                            const data = await response.json();
+                            displayResults(data);
+                            return;
+                        }
+                    } catch (err) {
+                        console.warn('Netlify search não disponível, usando fallback local', err);
+                    }
+                }
+
+                // Fallback para busca direta com .env local
+                const localEnv = getLocalEnv();
+                const googleBooksKey = localEnv.GOOGLE_BOOKS_API_KEY || '';
+                if (!googleBooksKey) {
+                    grid.innerHTML = 'Erro na busca.';
+                    return;
+                }
+                url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&key=${encodeURIComponent(googleBooksKey)}&maxResults=5`;
             }
 
             try {
@@ -195,7 +219,7 @@
             const grid = document.getElementById('api-grid');
             grid.innerHTML = '';
             let items;
-
+            
             if (currentCategory === 'movies') {
                 items = data.Search?.slice(0, 5) || [];
             } else if (currentCategory === 'music') {
@@ -208,7 +232,7 @@
                 grid.innerHTML = '<p class="text-gray-400 col-span-full">Nenhum resultado encontrado.</p>';
                 return;
             }
-
+            
             items.forEach(item => {
                 let title, img, id, subtitle = '';
                 if (currentCategory === 'movies') {
@@ -228,23 +252,26 @@
                     const authors = item.volumeInfo.authors;
                     subtitle = authors && authors.length > 0 ? authors[0] : 'Autor desconhecido';
                 }
-
+                
                 const card = document.createElement('div');
                 card.className = "bg-gray-700 p-2 rounded text-center";
                 let cardHTML = `
                     <img src="${img}" class="h-32 mx-auto rounded mb-2 object-cover">
                     <p class="text-xs font-bold truncate">${title}</p>
                 `;
+                
                 if (subtitle) {
                     cardHTML += `<p class="text-[10px] text-gray-400 truncate">${subtitle}</p>`;
                 }
-
-                if(gender) {
+                
+                if(currentCategory === 'music' && gender) {
                     cardHTML += `<p class="text-[10px] text-gray-400 truncate">${gender}</p>`;
-                };
-
+                }
+                
                 cardHTML += `<button onclick="saveToSupabase('${id}', '${title.replace(/'/g, "")}', '${img}')" class="bg-green-600 text-[10px] px-2 py-1 mt-2 rounded">Adicionar</button>`;
+                
                 card.innerHTML = cardHTML;
+                
                 grid.appendChild(card);
             });
         }
