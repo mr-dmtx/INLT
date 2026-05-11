@@ -218,6 +218,7 @@
                     subtitle = item.Year || 'Ano desconhecido';
                 } else if (currentCategory === 'music') {
                     title = item.artistName;
+                    gender = item.primaryGenreName || '';
                     img = 'https://placehold.co/200x300?text=' + encodeURIComponent(title);
                     id = item.artistId.toString();
                 } else {
@@ -236,8 +237,12 @@
                 `;
                 if (subtitle) {
                     cardHTML += `<p class="text-[10px] text-gray-400 truncate">${subtitle}</p>`;
-                    
                 }
+
+                if(gender) {
+                    cardHTML += `<p class="text-[10px] text-gray-400 truncate">${gender}</p>`;
+                };
+
                 cardHTML += `<button onclick="saveToSupabase('${id}', '${title.replace(/'/g, "")}', '${img}')" class="bg-green-600 text-[10px] px-2 py-1 mt-2 rounded">Adicionar</button>`;
                 card.innerHTML = cardHTML;
                 grid.appendChild(card);
