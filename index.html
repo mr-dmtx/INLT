@@ -175,7 +175,7 @@
                     grid.innerHTML = 'Erro na busca.';
                     return;
                 }
-                url = `https://www.omdbapi.com/?apikey=${encodeURIComponent(omdbKey)}&s=${encodeURIComponent(query)}&type=movie&page=1`;
+                url = `https://www.omdbapi.com/?apikey=${encodeURIComponent(omdbKey)}&s=${encodeURIComponent(query)}`;
             } else if (currentCategory === 'music') {
                 url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=musicArtist&limit=5`;
             } else if (currentCategory === 'books') {
@@ -221,10 +221,11 @@
             let items;
             
             if (currentCategory === 'movies') {
-                items = data.Search?.slice(0, 5) || [];
+                console.log(data.Search);
+                items = data.Search || [];
             } else if (currentCategory === 'music') {
                 items = data.results || [];
-            } else {
+            } else {    
                 items = data.items?.slice(0, 5) || [];
             }
 
@@ -236,7 +237,7 @@
             items.forEach(item => {
                 let title, img, id, subtitle = '';
                 if (currentCategory === 'movies') {
-                    title = item.Title;
+                    title = item.Title  + ` (${item.Type})`;
                     img = item.Poster && item.Poster !== 'N/A' ? item.Poster : 'https://placehold.co/200x300?text=' + encodeURIComponent(title);
                     id = item.imdbID;
                     subtitle = item.Year || 'Ano desconhecido';

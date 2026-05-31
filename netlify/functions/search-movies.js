@@ -8,7 +8,7 @@ exports.handler = async function (event) {
   }
 
   const apiKey = process.env.OMDB_API_KEY || '';
-  const url = `https://www.omdbapi.com/?apikey=${encodeURIComponent(apiKey)}&s=${encodeURIComponent(query)}&type=movie&page=1`;
+  const url = `https://www.omdbapi.com/?apikey=${encodeURIComponent(apiKey)}&s=${encodeURIComponent(query)}`;
 
   try {
     const response = await fetch(url);
