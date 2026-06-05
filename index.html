@@ -27,6 +27,7 @@
                 <button onclick="showSection('movies')" class="hover:text-blue-400">Filmes</button>
                 <button onclick="showSection('music')" class="hover:text-blue-400">Artistas</button>
                 <button onclick="showSection('books')" class="hover:text-blue-400">Livros</button>
+                <button onclick="showSection('streaming')" class="hover:text-blue-400">Streaming</button>
             </div>
         </div>
     </nav>
@@ -51,6 +52,11 @@
                     <i class="fas fa-book text-5xl mb-4 text-green-400"></i>
                     <h3 class="text-xl font-bold">Livros</h3>
                 </div>
+                <div onclick="showSection('streaming')"
+                    class="bg-gray-800 p-8 rounded-xl cursor-pointer hover:scale-105 transition border border-gray-700">
+                    <i class="fas fa-play-circle text-5xl mb-4 text-red-400"></i>
+                    <h3 class="text-xl font-bold">Streaming</h3>
+                </div>
             </div>
         </section>
 
@@ -73,6 +79,33 @@
 
             <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Minha Lista no Banco de Dados:</h3>
             <div id="saved-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+        </section>
+
+        <!-- STREAMING SECTION -->
+        <section id="streaming" class="hidden">
+            <h2 class="text-3xl font-bold mb-8">Reprodutor de Streaming</h2>
+            
+            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8">
+                <h3 class="text-lg font-semibold mb-4">Adicionar Vídeo via iframe</h3>
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">URL do iframe (coloque a src do iframe)</label>
+                        <input type="text" id="iframe-url" placeholder="https://example.com/embed/video-id" 
+                            class="w-full bg-gray-700 text-white p-3 rounded outline-none focus:ring-2 focus:ring-red-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Título (opcional)</label>
+                        <input type="text" id="video-title" placeholder="Título do vídeo" 
+                            class="w-full bg-gray-700 text-white p-3 rounded outline-none focus:ring-2 focus:ring-red-500">
+                    </div>
+                    <button onclick="addStreamVideo()" class="bg-red-600 px-6 py-2 rounded hover:bg-red-700 font-semibold w-full">
+                        <i class="fas fa-plus mr-2"></i>Adicionar Vídeo
+                    </button>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Vídeos Armazenados:</h3>
+            <div id="streaming-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
         </section>
     </main>
     <script src="./env.js"></script>
@@ -113,24 +146,29 @@
         }
 
         async function showSection(section) {
-            if (!_supabase) {
-                await initConfig();
-            }
+            if (section !== 'home' && section !== 'streaming') {
+                if (!_supabase) {
+                    await initConfig();
+                }
 
-            if (!_supabase) {
-                alert('Aguarde, carregando configurações...');
-                return;
+                if (!_supabase) {
+                    alert('Aguarde, carregando configurações...');
+                    return;
+                }
             }
 
             document.getElementById('home').classList.add('hidden');
-            const listView = document.getElementById('list-view');
+            document.getElementById('list-view').classList.add('hidden');
+            document.getElementById('streaming').classList.add('hidden');
 
             if (section === 'home') {
-                listView.classList.add('hidden');
                 document.getElementById('home').classList.remove('hidden');
+            } else if (section === 'streaming') {
+                document.getElementById('streaming').classList.remove('hidden');
+                renderStreamingVideos();
             } else {
                 currentCategory = section;
-                listView.classList.remove('hidden');
+                document.getElementById('list-view').classList.remove('hidden');
                 document.getElementById('section-title').innerText = section.toUpperCase();
                 document.getElementById('api-results').classList.add('hidden');
                 renderSavedItems();
@@ -336,6 +374,83 @@
 
             if (error) alert('Erro ao deletar');
             else renderSavedItems();
+        }
+
+        // --- FUNÇÕES DO STREAMING ---
+
+        // Carrega vídeos do localStorage
+        function getStreamingVideos() {
+            const stored = localStorage.getItem('streamingVideos');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        // Salva vídeos no localStorage
+        function saveStreamingVideos(videos) {
+            localStorage.setItem('streamingVideos', JSON.stringify(videos));
+        }
+
+        // Adiciona novo vídeo
+        function addStreamVideo() {
+            const url = document.getElementById('iframe-url').value.trim();
+            const title = document.getElementById('video-title').value.trim() || 'Vídeo Sem Título';
+
+            if (!url) {
+                alert('Por favor, insira uma URL de iframe!');
+                return;
+            }
+
+            const videos = getStreamingVideos();
+            const newVideo = {
+                id: Date.now(),
+                title: title,
+                url: url,
+                createdAt: new Date().toLocaleString('pt-BR')
+            };
+
+            videos.push(newVideo);
+            saveStreamingVideos(videos);
+
+            // Limpa os inputs
+            document.getElementById('iframe-url').value = '';
+            document.getElementById('video-title').value = '';
+
+            alert('Vídeo adicionado com sucesso!');
+            renderStreamingVideos();
+        }
+
+        // Renderiza os vídeos armazenados
+        function renderStreamingVideos() {
+            const grid = document.getElementById('streaming-grid');
+            const videos = getStreamingVideos();
+
+            if (videos.length === 0) {
+                grid.innerHTML = '<p class="text-gray-400 col-span-full">Nenhum vídeo adicionado ainda.</p>';
+                return;
+            }
+
+            grid.innerHTML = videos.map(video => `
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <div class="flex justify-between items-start mb-3">
+                        <h4 class="text-lg font-bold text-red-400">${video.title}</h4>
+                        <button onclick="deleteStreamingVideo(${video.id})" class="bg-red-600 p-2 rounded hover:bg-red-700">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mb-4">Adicionado em: ${video.createdAt}</p>
+                    <iframe width="100%" height="400" src="${video.url}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="rounded"></iframe>
+                </div>
+            `).join('');
+        }
+
+        // Deleta um vídeo
+        function deleteStreamingVideo(id) {
+            if (confirm('Deseja deletar este vídeo?')) {
+                const videos = getStreamingVideos();
+                const filtered = videos.filter(video => video.id !== id);
+                saveStreamingVideos(filtered);
+                renderStreamingVideos();
+                alert('Vídeo deletado!');
+            }
         }
     </script>
 </body>
