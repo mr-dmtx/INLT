@@ -28,6 +28,7 @@
                 <button onclick="showSection('music')" class="hover:text-blue-400">Artistas</button>
                 <button onclick="showSection('books')" class="hover:text-blue-400">Livros</button>
                 <button onclick="showSection('streaming')" class="hover:text-blue-400">Streaming</button>
+                <button onclick="showSection('international')" class="hover:text-blue-400">Jogos Internacionais</button>
             </div>
         </div>
     </nav>
@@ -56,6 +57,11 @@
                     class="bg-gray-800 p-8 rounded-xl cursor-pointer hover:scale-105 transition border border-gray-700">
                     <i class="fas fa-play-circle text-5xl mb-4 text-red-400"></i>
                     <h3 class="text-xl font-bold">Streaming</h3>
+                </div>
+                <div onclick="showSection('international')"
+                    class="bg-gray-800 p-8 rounded-xl cursor-pointer hover:scale-105 transition border border-gray-700">
+                    <i class="fas fa-futbol text-5xl mb-4 text-yellow-400"></i>
+                    <h3 class="text-xl font-bold">Jogos Internacionais</h3>
                 </div>
             </div>
         </section>
@@ -107,6 +113,21 @@
             <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Vídeos Armazenados:</h3>
             <div id="streaming-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
         </section>
+
+        <!-- INTERNATIONAL GAMES SECTION -->
+        <section id="international" class="hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold">Próximos jogos internacionais</h2>
+                    <p class="text-gray-400 mt-2">Clubes espanhóis e seleção principal em competições internacionais.</p>
+                </div>
+                <button onclick="loadInternationalGames()"
+                    class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
+                    <i class="fas fa-sync-alt mr-2"></i>Atualizar
+                </button>
+            </div>
+            <div id="international-games" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
     </main>
     <script src="./env.js"></script>
     <script>
@@ -146,7 +167,7 @@
         }
 
         async function showSection(section) {
-            if (section !== 'home' && section !== 'streaming') {
+            if (section !== 'home' && section !== 'streaming' && section !== 'international') {
                 if (!_supabase) {
                     await initConfig();
                 }
@@ -160,12 +181,16 @@
             document.getElementById('home').classList.add('hidden');
             document.getElementById('list-view').classList.add('hidden');
             document.getElementById('streaming').classList.add('hidden');
+            document.getElementById('international').classList.add('hidden');
 
             if (section === 'home') {
                 document.getElementById('home').classList.remove('hidden');
             } else if (section === 'streaming') {
                 document.getElementById('streaming').classList.remove('hidden');
                 renderStreamingVideos();
+            } else if (section === 'international') {
+                document.getElementById('international').classList.remove('hidden');
+                loadInternationalGames();
             } else {
                 currentCategory = section;
                 document.getElementById('list-view').classList.remove('hidden');
@@ -358,7 +383,7 @@
                 <div class="bg-gray-800 p-3 rounded border border-gray-700 relative group">
                     <img src="${item.img_url}" class="rounded mb-2 h-40 object-cover w-full">
                     <h4 class="text-sm font-bold truncate">${item.title}</h4>
-                    ${(currentCategory === 'movies') ? `<a class="text-[10px] text-gray-400" href="https://streamimdb.me/embed/${item.item_id}/" target="_blank">Assistir</a>` : "" }
+                    ${(currentCategory === 'movies') ? `<a class="text-[10px] text-gray-400" href="https://vidsrcme.ru/embed/${item.item_id}/" target="_blank">Assistir</a>` : "" }
                     <button onclick="deleteFromSupabase(${item.id})" class="absolute top-2 right-2 bg-red-600 p-2 rounded-full opacity-0 group-hover:opacity-100 transition">
                         <i class="fas fa-trash text-xs"></i>
                     </button>
@@ -451,6 +476,106 @@
                 renderStreamingVideos();
                 alert('Vídeo deletado!');
             }
+        }
+
+        const spanishTeams = [
+            'Real Madrid', 'Barcelona', 'Atlético de Madrid', 'Atletico Madrid',
+            'Athletic Club', 'Villarreal', 'Sevilla', 'Real Betis', 'Real Sociedad',
+            'Valencia', 'Girona', 'Celta Vigo', 'Osasuna', 'Rayo Vallecano',
+            'Mallorca', 'Getafe', 'Espanyol', 'Alavés', 'Alaves'
+        ];
+
+        function normalizeText(value) {
+            return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        }
+
+        function isSpanishTeam(name) {
+            const normalizedName = normalizeText(name);
+            return spanishTeams.some(team => normalizedName.includes(normalizeText(team)));
+        }
+
+        function isSpanishNationalTeam(team) {
+            return team?.id === '164' || team?.abbreviation === 'ESP' || normalizeText(team?.displayName) === 'spain';
+        }
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+            }[character]));
+        }
+
+        async function loadInternationalGames() {
+            const container = document.getElementById('international-games');
+            container.innerHTML = '<p class="col-span-full text-center text-gray-400">Carregando próximos jogos...</p>';
+
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() + 90);
+            const dateRange = `${formatApiDate(today)}-${formatApiDate(endDate)}`;
+            const competitions = [
+                { slug: 'uefa.champions', type: 'club' },
+                { slug: 'uefa.europa', type: 'club' },
+                { slug: 'uefa.europa.conf', type: 'club' },
+                { slug: 'uefa.nations', type: 'national' },
+                { slug: 'fifa.friendly', type: 'national' }
+            ];
+
+            try {
+                const responses = await Promise.all(competitions.map(competition =>
+                    fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${competition.slug}/scoreboard?dates=${dateRange}&limit=100`)
+                        .then(response => response.ok ? response.json() : null)
+                ));
+
+                const games = responses.flatMap((data, index) => (data?.events || []).map(event => {
+                    const match = event.competitions?.[0];
+                    const teams = match?.competitors || [];
+                    const home = teams.find(team => team.homeAway === 'home');
+                    const away = teams.find(team => team.homeAway === 'away');
+                    const competition = competitions[index];
+                    const includesSpain = competition.type === 'national'
+                        ? teams.some(team => isSpanishNationalTeam(team.team))
+                        : teams.some(team => isSpanishTeam(team.team?.displayName));
+
+                    if (!home || !away || !includesSpain) {
+                        return null;
+                    }
+
+                    return {
+                        id: event.id,
+                        date: event.date,
+                        home: home.team.displayName,
+                        away: away.team.displayName,
+                        competition: competition.type === 'national'
+                            ? `Seleção Espanhola - ${data.leagues?.[0]?.name || 'Competição internacional'}`
+                            : data.leagues?.[0]?.name || 'Competição UEFA',
+                        venue: match.venue?.fullName || ''
+                    };
+                }).filter(Boolean));
+
+                const uniqueGames = [...new Map(games.map(game => [game.id, game])).values()]
+                    .sort((first, second) => new Date(first.date) - new Date(second.date));
+
+                if (!uniqueGames.length) {
+                    container.innerHTML = '<p class="col-span-full text-center text-gray-400">Nenhum jogo encontrado nos próximos 90 dias.</p>';
+                    return;
+                }
+
+                container.innerHTML = uniqueGames.map(game => `
+                    <article class="bg-gray-800 p-5 rounded-xl border border-gray-700">
+                        <p class="text-sm text-yellow-400 mb-3">${escapeHtml(game.competition)}</p>
+                        <h3 class="text-lg font-bold mb-3">${escapeHtml(game.home)} <span class="text-gray-500">x</span> ${escapeHtml(game.away)}</h3>
+                        <p class="text-sm text-gray-400"><i class="far fa-calendar mr-2"></i>${new Date(game.date).toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                        ${game.venue ? `<p class="text-sm text-gray-400 mt-2"><i class="fas fa-map-marker-alt mr-2"></i>${escapeHtml(game.venue)}</p>` : ''}
+                    </article>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar jogos internacionais:', error);
+                container.innerHTML = '<p class="col-span-full text-center text-red-400">Não foi possível carregar os jogos.</p>';
+            }
+        }
+
+        function formatApiDate(date) {
+            return date.toISOString().slice(0, 10).replace(/-/g, '');
         }
     </script>
 </body>
