@@ -510,7 +510,7 @@
 
             const today = new Date();
             const endDate = new Date(today);
-            endDate.setMonth(endDate.getMonth() + 2);
+            endDate.setMonth(endDate.getMonth() + 1);
             const dateRange = `${formatApiDate(today)}-${formatApiDate(endDate)}`;
             const competitions = [
                 { slug: 'uefa.champions', type: 'club' },
@@ -522,7 +522,7 @@
 
             try {
                 const responses = await Promise.all(competitions.map(competition =>
-                    fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${competition.slug}/scoreboard?dates=${formatApiDate(today)}&limit=100`)
+                    fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${competition.slug}/events?dates=${dateRange}&limit=100`)
                         .then(response => response.ok ? response.json() : null)
                 ));
 
